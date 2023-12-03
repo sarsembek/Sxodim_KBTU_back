@@ -1,4 +1,4 @@
-package kz.kbtu.sxodimkbtu.model;
+package kz.kbtu.sxodimkbtu.enums;
 
 public enum EventType {
     LECTURE,
