@@ -7,6 +7,9 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+
 
 @Service
 public class FBInitialize {
@@ -14,8 +17,11 @@ public class FBInitialize {
     @PostConstruct
     public void initialize() {
         try {
-            FileInputStream serviceAccount =
-                    new FileInputStream("./src/main/resources/firebase-service-credentials.json");
+            InputStream serviceAccount = getClass().getClassLoader().getResourceAsStream("firebase-service-credentials.json");
+
+            if (serviceAccount == null) {
+                throw new FileNotFoundException("File firebase-service-credentials.json not found on the classpath");
+            }
 
             FirebaseOptions options = new FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
