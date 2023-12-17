@@ -43,7 +43,7 @@ public class EventController {
     }
 
     @PostMapping("/registerUserToEvent")
-    public String registerUserToEvent(@RequestParam String userID, int eventID) throws InterruptedException, ExecutionException {
+    public String registerUserToEvent(@RequestParam String userID, @RequestParam int eventID) throws InterruptedException, ExecutionException {
         return eventService.registerUserToEvent(userID, eventID);
     }
 }
