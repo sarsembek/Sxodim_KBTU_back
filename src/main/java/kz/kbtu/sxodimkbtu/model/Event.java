@@ -7,7 +7,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Getter
@@ -24,4 +27,5 @@ public class Event {
     private EventType eventType;
     private String organizerId;
     private String departmentId;
+    private List<Registration> registrations;
 }

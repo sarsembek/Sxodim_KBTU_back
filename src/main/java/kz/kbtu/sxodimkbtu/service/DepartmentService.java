@@ -4,7 +4,6 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import kz.kbtu.sxodimkbtu.model.Department;
-import kz.kbtu.sxodimkbtu.model.Event;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -33,14 +32,14 @@ public class DepartmentService {
         Firestore dbFirestore = FirestoreClient.getFirestore();
 
         // Retrieve the last department ID
-        Query lastEventQuery = dbFirestore.collection(COL_NAME).orderBy("id", Query.Direction.DESCENDING).limit(1);
+        Query lastEventQuery = dbFirestore.collection(COL_NAME).orderBy("departmentID", Query.Direction.DESCENDING).limit(1);
         ApiFuture<QuerySnapshot> lastEventFuture = lastEventQuery.get();
         QuerySnapshot lastEventSnapshot = lastEventFuture.get();
 
         Long lastDepartmentId = null;
         if (!lastEventSnapshot.isEmpty()) {
             DocumentSnapshot lastEventDocument = lastEventSnapshot.getDocuments().get(0);
-            lastDepartmentId = lastEventDocument.getLong("id");
+            lastDepartmentId = lastEventDocument.getLong("departmentID");
             log.info(String.valueOf(lastDepartmentId));
         }
 
@@ -55,5 +54,20 @@ public class DepartmentService {
                 dbFirestore.collection(COL_NAME).document(department.getDepartmentName()).set(department);
 
         return collectionsApiFuture.get().getUpdateTime().toString();
+    }
+    public static Department getDepartmentDetails(int departmentID) throws InterruptedException, ExecutionException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        CollectionReference departments = dbFirestore.collection(COL_NAME);
+        QuerySnapshot querySnapshot = departments.whereEqualTo("departmentID",departmentID).get().get();
+
+        QueryDocumentSnapshot document = querySnapshot.getDocuments().get(0);
+
+        Department department = null;
+        if(document.exists()) {
+            department = document.toObject(Department.class);
+            return department;
+        }else {
+            return null;
+        }
     }
 }

@@ -2,6 +2,7 @@ package kz.kbtu.sxodimkbtu.controller;
 
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.firebase.auth.FirebaseAuthException;
 import kz.kbtu.sxodimkbtu.model.Event;
 import kz.kbtu.sxodimkbtu.service.EventService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +19,11 @@ public class EventController {
     EventService eventService;
 
     @GetMapping("/getEvents")
-    public List<Event> getEvents() throws InterruptedException, ExecutionException {
+    public List<Event> getEvents() throws InterruptedException, ExecutionException, FirebaseAuthException {
         return eventService.getEvents();
     }
     @GetMapping("/getEventDetails")
-    public Event getEvent(@RequestParam int eventID) throws InterruptedException, ExecutionException {
+    public Event getEvent(@RequestParam int eventID) throws InterruptedException, ExecutionException, FirebaseAuthException {
         return eventService.getEventDetails(eventID);
     }
 
@@ -39,5 +40,10 @@ public class EventController {
     @DeleteMapping("/deleteEvent")
     public String deleteEvent(@RequestParam int eventID) {
         return eventService.deleteEvent(eventID);
+    }
+
+    @PostMapping("/registerUserToEvent")
+    public String registerUserToEvent(@RequestParam String userID, int eventID) throws InterruptedException, ExecutionException {
+        return eventService.registerUserToEvent(userID, eventID);
     }
 }

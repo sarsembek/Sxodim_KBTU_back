@@ -2,28 +2,46 @@ package kz.kbtu.sxodimkbtu.service;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import kz.kbtu.sxodimkbtu.model.Department;
 import kz.kbtu.sxodimkbtu.model.Event;
+import kz.kbtu.sxodimkbtu.model.Registration;
+import kz.kbtu.sxodimkbtu.model.UserRegistration;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
+
 
 @Slf4j
 @Service
 public class EventService {
     public static final String COL_NAME="events";
+    private static final String USERS_COLLECTION = "users";
+
     //get Events
-    public List<Event> getEvents() throws InterruptedException, ExecutionException {
+    public List<Event> getEvents() throws InterruptedException, ExecutionException, FirebaseAuthException {
         Firestore dbFireStore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> future = dbFireStore.collection(COL_NAME).get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         List<Event> events = new ArrayList<>();
         for (QueryDocumentSnapshot document : documents) {
-            events.add(document.toObject(Event.class));
+            Event event = document.toObject(Event.class);
+
+            String departmentId = event.getDepartmentId();
+            String organizerId = event.getOrganizerId();
+            UserRecord organizer = UserService.getUserInfoByUid(organizerId);
+            Department department = DepartmentService.getDepartmentDetails(Integer.parseInt(departmentId));
+            event.setOrganizerId(organizer.getEmail());
+            assert department != null;
+            event.setDepartmentId(department.getDepartmentName());
+
+            events.add(event);
         }
         return events;
     }
@@ -33,14 +51,14 @@ public class EventService {
         Firestore dbFirestore = FirestoreClient.getFirestore();
 
         // Retrieve the last event ID
-        Query lastEventQuery = dbFirestore.collection(COL_NAME).orderBy("id", Query.Direction.DESCENDING).limit(1);
+        Query lastEventQuery = dbFirestore.collection(COL_NAME).orderBy("eventID", Query.Direction.DESCENDING).limit(1);
         ApiFuture<QuerySnapshot> lastEventFuture = lastEventQuery.get();
         QuerySnapshot lastEventSnapshot = lastEventFuture.get();
 
         Long lastEventId = null;
         if (!lastEventSnapshot.isEmpty()) {
             DocumentSnapshot lastEventDocument = lastEventSnapshot.getDocuments().get(0);
-            lastEventId = lastEventDocument.getLong("id");
+            lastEventId = lastEventDocument.getLong("eventID");
             log.info(String.valueOf(lastEventId));
         }
 
@@ -58,16 +76,23 @@ public class EventService {
     }
 
     //Get event from FireStore
-    public Event getEventDetails(int eventID) throws InterruptedException, ExecutionException {
+    public Event getEventDetails(int eventID) throws InterruptedException, ExecutionException, FirebaseAuthException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference documentReference = dbFirestore.collection(COL_NAME).document(String.valueOf(eventID));
-        ApiFuture<DocumentSnapshot> future = documentReference.get();
+        CollectionReference events = dbFirestore.collection(COL_NAME);
+        QuerySnapshot querySnapshot = events.whereEqualTo("eventID",eventID).get().get();
 
-        DocumentSnapshot document = future.get();
-
+        QueryDocumentSnapshot document = querySnapshot.getDocuments().get(0);
         Event event = null;
         if(document.exists()) {
             event = document.toObject(Event.class);
+            String departmentId = event.getDepartmentId();
+            String organizerId = event.getOrganizerId();
+            Department department = DepartmentService.getDepartmentDetails(Integer.parseInt(departmentId));
+            UserRecord organizer = UserService.getUserInfoByUid(organizerId);
+
+            event.setOrganizerId(organizer.getEmail());
+            assert department != null;
+            event.setDepartmentId(department.getDepartmentName());
             return event;
         }else {
             return null;
@@ -87,5 +112,46 @@ public class EventService {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<WriteResult> writeResult = dbFirestore.collection(COL_NAME).document(String.valueOf(eventID)).delete();
         return "Document with Event ID "+eventID+" has been deleted";
+    }
+
+    public String registerUserToEvent(String userID, int eventID) throws InterruptedException, ExecutionException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        CollectionReference eventsCollection = dbFirestore.collection(COL_NAME);
+        ApiFuture<QuerySnapshot> querySnapshot = eventsCollection.whereEqualTo("eventID", eventID).get();
+
+        QuerySnapshot documents = querySnapshot.get();
+
+        List<QueryDocumentSnapshot> documentSnapshots = documents.getDocuments();
+
+        Registration registration = new Registration(userID,new Date());
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("registrations", FieldValue.arrayUnion(registration));
+
+        for (QueryDocumentSnapshot document: documentSnapshots) {
+            Event event = document.toObject(Event.class);
+            DocumentReference documentRef = eventsCollection.document(event.getName());
+            ApiFuture<WriteResult> updateFuture = documentRef.update(updates);
+        }
+
+        DocumentReference userDocRef = dbFirestore.collection(USERS_COLLECTION).document(userID);
+        DocumentSnapshot userSnapshot = userDocRef.get().get();
+        log.info(userSnapshot.toString());
+        if (userSnapshot.exists()) {
+            List<Integer> eventIDs = userSnapshot.contains("eventIDs")
+                    ? (List<Integer>) userSnapshot.get("eventIDs")
+                    : new ArrayList<>(); // Assuming "eventIDs" is the field name
+
+            // Add the eventId to the array
+            eventIDs.add(eventID);
+            userDocRef.update("userID", userID);
+            // Update the "eventIDs" field
+            userDocRef.update("eventIDs", eventIDs);
+        } else {
+            // Document doesn't exist, create a new one
+            Map<String, Object> newUser = Collections.singletonMap("eventIDs", Arrays.asList(eventID));
+            userDocRef.set(newUser);
+        }
+
+        return "User with ID: " + userID + " was registered to event with ID: " + eventID;
     }
 }
