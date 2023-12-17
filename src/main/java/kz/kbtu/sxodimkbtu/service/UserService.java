@@ -33,7 +33,7 @@ public class UserService {
             List<Long> eventIDs = userSnapshot.contains("eventIDs")
                     ? (List<Long>) userSnapshot.get("eventIDs")
                     : new ArrayList<>();
-            userRegistration = new UserRegistration(userUid, eventIDs);
+            userRegistration = new UserRegistration(userID, eventIDs);
         }
         return userRegistration;
     }
