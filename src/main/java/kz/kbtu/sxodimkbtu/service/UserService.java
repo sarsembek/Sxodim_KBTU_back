@@ -20,8 +20,7 @@ import java.util.concurrent.ExecutionException;
 public class UserService {
     private static final String USERS_COLLECTION = "users";
 
-    public UserRegistration getUserRegistrations(String firebaseIdtoken) throws InterruptedException, ExecutionException, FirebaseAuthException {
-        String userID = getUserIdByFirebaseId(firebaseIdtoken);
+    public UserRegistration getUserRegistrations(String userID) throws InterruptedException, ExecutionException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         DocumentReference userDocRef = dbFirestore.collection(USERS_COLLECTION).document(userID);
 

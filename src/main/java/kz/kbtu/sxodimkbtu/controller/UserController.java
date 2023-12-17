@@ -31,9 +31,9 @@ public class UserController {
     }
 
     @GetMapping("getUserRegistrations")
-    public UserRegistration getUserRegistration(@RequestParam String firebaseIdToken) throws FirebaseAuthException {
+    public UserRegistration getUserRegistration(@RequestParam String userID) {
         try {
-            return userService.getUserRegistrations(firebaseIdToken);
+            return userService.getUserRegistrations(userID);
         } catch (InterruptedException | ExecutionException e) {
             // Handle exceptions appropriately
             e.printStackTrace();
