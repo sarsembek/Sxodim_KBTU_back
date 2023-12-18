@@ -154,4 +154,48 @@ public class EventService {
 
         return "User with ID: " + userID + " was registered to event with ID: " + eventID;
     }
+
+    public String deleteEventFromRegistrations(String userID, int eventID) throws ExecutionException, InterruptedException{
+        deleteEventFromUser(userID, eventID);
+        deleteUserFromEvent(userID, eventID);
+        return "Event with ID: " + eventID + " removed";
+    }
+    public void deleteEventFromUser(String userID, int eventID) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        DocumentReference documentReference = dbFirestore.collection(USERS_COLLECTION).document(userID);
+        // Get the DocumentSnapshot asynchronously
+        ApiFuture<DocumentSnapshot> future = documentReference.get();
+        // Wait for the result
+        DocumentSnapshot documentSnapshot = future.get();
+
+        if (documentSnapshot.exists()) {
+            UserRegistration userRegistration = documentSnapshot.toObject(UserRegistration.class);
+//            log.info(userRegistration.toString());
+            if (userRegistration != null) {
+                List<Long> currentArray = userRegistration.getEventIDs();
+                Long eventIDToRemove = (long) eventID;
+                currentArray.removeIf(target -> (target == eventIDToRemove));
+                log.info(currentArray.toString());
+                documentReference.update("eventIDs", currentArray);
+            }
+        }
+    }
+    public void deleteUserFromEvent(String userID, int eventID) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        CollectionReference eventsCollection = dbFirestore.collection(COL_NAME);
+        ApiFuture<QuerySnapshot> querySnapshot = eventsCollection
+                .whereEqualTo("eventID", eventID)
+                .get();
+        QuerySnapshot documents = querySnapshot.get();
+        for (QueryDocumentSnapshot document : documents) {
+            List<Map<String, Object>> registrations = (List<Map<String, Object>>) document.get("registrations");
+            if (registrations != null) {
+                registrations.removeIf(registration -> userID.equals(registration.get("userID")));
+                // Update the document with the modified registrations array
+                DocumentReference documentRef = eventsCollection.document(document.getId());
+                documentRef.update("registrations", registrations);
+            }
+        }
+    }
+
 }

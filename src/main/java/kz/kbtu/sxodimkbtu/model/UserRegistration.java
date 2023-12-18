@@ -17,5 +17,5 @@ import java.util.List;
 public class UserRegistration {
     @Id
     private String userID;
-    private List<Long> events;
+    private List<Long> eventIDs;
 }

@@ -46,4 +46,9 @@ public class EventController {
     public String registerUserToEvent(@RequestParam String userID, @RequestParam int eventID) throws InterruptedException, ExecutionException {
         return eventService.registerUserToEvent(userID, eventID);
     }
+
+    @DeleteMapping("/deleteEventFromRegistrations")
+    public String deleteEventFromRegistrations(@RequestParam String userID, @RequestParam int eventID) throws InterruptedException, ExecutionException {
+        return eventService.deleteEventFromRegistrations(userID,eventID);
+    }
 }
